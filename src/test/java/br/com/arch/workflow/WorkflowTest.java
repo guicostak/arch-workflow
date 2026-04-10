@@ -1,0 +1,180 @@
+package br.com.arch.workflow;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class WorkflowTest {
+
+    static class UsuarioContext {
+        final List<String> stepsExecutados = new ArrayList<>();
+        boolean jaExiste = false;
+    }
+
+    record DadosUsuario(String nome, String email) {}
+    record DadosValidados(String nome, String email) {}
+    record UsuarioVerificado(String nome, String email) {}
+    record UsuarioSalvo(Long id, String nome, String email) {}
+
+    static final Activity<DadosUsuario, UsuarioContext, DadosValidados> verificarDadosActivity =
+            (input, ctx) -> {
+                if (input.nome() == null || input.nome().isBlank()) {
+                    throw new IllegalArgumentException("Nome e obrigatorio");
+                }
+                ctx.stepsExecutados.add("verificarDados");
+                return new DadosValidados(input.nome(), input.email());
+            };
+
+    static final Activity<DadosValidados, UsuarioContext, UsuarioVerificado> verificarSeJaExisteActivity =
+            (input, ctx) -> {
+                if (ctx.jaExiste) {
+                    throw new IllegalStateException("Usuario ja existe");
+                }
+                ctx.stepsExecutados.add("verificarSeJaExiste");
+                return new UsuarioVerificado(input.nome(), input.email());
+            };
+
+    static final Activity<UsuarioVerificado, UsuarioContext, UsuarioSalvo> salvarNoBancoActivity =
+            (input, ctx) -> {
+                ctx.stepsExecutados.add("salvarNoBanco");
+                return new UsuarioSalvo(1L, input.nome(), input.email());
+            };
+
+    @Test
+    @DisplayName("deve executar workflow completo encadeando output -> input")
+    void deveExecutarWorkflowCompleto() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step("verificarDados", verificarDadosActivity)
+                .step("verificarSeJaExiste", verificarSeJaExisteActivity)
+                .step("salvarNoBanco", salvarNoBancoActivity)
+                .build("criarUsuario");
+
+        var context = new UsuarioContext();
+        var resultado = workflow.execute(new DadosUsuario("Joao", "joao@inter.com"), context);
+
+        assertThat(resultado.id()).isEqualTo(1L);
+        assertThat(resultado.nome()).isEqualTo("Joao");
+        assertThat(resultado.email()).isEqualTo("joao@inter.com");
+        assertThat(context.stepsExecutados).containsExactly("verificarDados", "verificarSeJaExiste", "salvarNoBanco");
+    }
+
+    @Test
+    @DisplayName("deve propagar contexto entre steps")
+    void devePropagarContexto() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosActivity)
+                .step(verificarSeJaExisteActivity)
+                .step(salvarNoBancoActivity)
+                .build();
+
+        var context = new UsuarioContext();
+        workflow.execute(new DadosUsuario("Maria", "maria@inter.com"), context);
+
+        assertThat(context.stepsExecutados).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("deve lancar WorkflowException quando step falha")
+    void deveLancarWorkflowExceptionQuandoStepFalha() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step("verificarDados", verificarDadosActivity)
+                .step("verificarSeJaExiste", verificarSeJaExisteActivity)
+                .step("salvarNoBanco", salvarNoBancoActivity)
+                .build("criarUsuario");
+
+        var context = new UsuarioContext();
+
+        assertThatThrownBy(() -> workflow.execute(new DadosUsuario("", "test@test.com"), context))
+                .isInstanceOf(WorkflowException.class)
+                .hasMessageContaining("verificarDados")
+                .extracting(e -> ((WorkflowException) e).getStepIndex())
+                .isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("deve parar execucao no step que falha sem executar os seguintes")
+    void devePararNoStepQueFalha() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step("verificarDados", verificarDadosActivity)
+                .step("verificarSeJaExiste", verificarSeJaExisteActivity)
+                .step("salvarNoBanco", salvarNoBancoActivity)
+                .build("criarUsuario");
+
+        var context = new UsuarioContext();
+        context.jaExiste = true;
+
+        assertThatThrownBy(() -> workflow.execute(new DadosUsuario("Joao", "joao@inter.com"), context))
+                .isInstanceOf(WorkflowException.class)
+                .hasMessageContaining("verificarSeJaExiste");
+
+        assertThat(context.stepsExecutados).containsExactly("verificarDados");
+    }
+
+    @Test
+    @DisplayName("executeSafe deve retornar resultado de sucesso")
+    void executeSafeDeveRetornarSucesso() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosActivity)
+                .step(verificarSeJaExisteActivity)
+                .step(salvarNoBancoActivity)
+                .build();
+
+        var result = workflow.executeSafe(new DadosUsuario("Ana", "ana@inter.com"), new UsuarioContext());
+
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.getOutput().nome()).isEqualTo("Ana");
+        assertThat(result.getError()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("executeSafe deve retornar resultado de falha sem lancar excecao")
+    void executeSafeDeveRetornarFalha() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosActivity)
+                .step(verificarSeJaExisteActivity)
+                .step(salvarNoBancoActivity)
+                .build();
+
+        var result = workflow.executeSafe(new DadosUsuario("", "test@test.com"), new UsuarioContext());
+
+        assertThat(result.isFailure()).isTrue();
+        assertThat(result.getError()).isPresent();
+    }
+
+    @Test
+    @DisplayName("deve funcionar com step unico")
+    void deveFuncionarComStepUnico() {
+        Workflow<String, Void, Integer> workflow = WorkflowBuilder
+                .<Void>builder()
+                .<String, Integer>step("calcularTamanho", (input, ctx) -> input.length())
+                .build();
+
+        assertThat(workflow.execute("hello", null)).isEqualTo(5);
+        assertThat(workflow.getStepCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("workflow deve expor nome e quantidade de steps")
+    void deveExporMetadados() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosActivity)
+                .step(verificarSeJaExisteActivity)
+                .step(salvarNoBancoActivity)
+                .build("criarUsuario");
+
+        assertThat(workflow.getName()).isEqualTo("criarUsuario");
+        assertThat(workflow.getStepCount()).isEqualTo(3);
+    }
+}
