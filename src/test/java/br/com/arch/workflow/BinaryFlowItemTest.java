@@ -81,17 +81,17 @@ class BinaryFlowItemTest {
                 .ifTrue(validarCpfFlowItem)
                 .ifFalse(validarCnpjFlowItem);
 
-        Flow<InputInicial, UsuarioContext, DocumentoValidado> flow = FlowBuilder
+        Workflow<InputInicial, UsuarioContext, DocumentoValidado> workflow = WorkflowBuilder
                 .<UsuarioContext>builder()
-                .step("validarNome", validarNomeFlowItem)
-                .step("converter", converterFlowItem)
-                .step("validarDocumento", binaryStep)
+                .step(validarNomeFlowItem)
+                .step(converterFlowItem)
+                .step(binaryStep)
                 .build("cadastroUsuario");
 
         var ctx = new UsuarioContext();
         ctx.isPessoaFisica = true;
 
-        var result = flow.execute(new InputInicial("Joao", "12345678900", "12345678000100"), ctx);
+        var result = workflow.execute(new InputInicial("Joao", "12345678900", "12345678000100"), ctx);
 
         assertThat(result.tipo()).isEqualTo("CPF");
         assertThat(ctx.documentoValidado).isEqualTo("12345678900");
