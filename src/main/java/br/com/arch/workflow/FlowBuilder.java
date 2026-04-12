@@ -26,9 +26,11 @@ import java.util.List;
 public final class FlowBuilder<I, C, O> {
 
     private final List<StepEntry<?, C, ?>> steps;
+    private final List<ErrorHandlerEntry<C>> errorHandlers;
 
-    private FlowBuilder(List<StepEntry<?, C, ?>> steps) {
+    private FlowBuilder(List<StepEntry<?, C, ?>> steps, List<ErrorHandlerEntry<C>> errorHandlers) {
         this.steps = steps;
+        this.errorHandlers = errorHandlers;
     }
 
     /**
@@ -45,7 +47,18 @@ public final class FlowBuilder<I, C, O> {
     public <N> FlowBuilder<I, C, N> step(FlowItem<O, C, N> flowItem) {
         List<StepEntry<?, C, ?>> newSteps = new ArrayList<>(this.steps);
         newSteps.add(new StepEntry<>(flowItemName(flowItem), flowItem));
-        return new FlowBuilder<>(newSteps);
+        return new FlowBuilder<>(newSteps, this.errorHandlers);
+    }
+
+    /**
+     * Registra um handler para exceções de um tipo especifico.
+     * Quando um step lanca uma exceção compatível, o handler é invocado
+     * com a exceção e o contexto antes de propagar.
+     */
+    public <E extends Exception> FlowBuilder<I, C, O> handle(Class<E> exceptionType, ErrorHandler<E, C> handler) {
+        List<ErrorHandlerEntry<C>> newHandlers = new ArrayList<>(this.errorHandlers);
+        newHandlers.add(new ErrorHandlerEntry<>(exceptionType, handler));
+        return new FlowBuilder<>(this.steps, newHandlers);
     }
 
     /**
@@ -55,7 +68,7 @@ public final class FlowBuilder<I, C, O> {
         if (steps.isEmpty()) {
             throw new IllegalStateException("Workflow deve ter pelo menos um step");
         }
-        return new Workflow<>(steps);
+        return new Workflow<>(steps, errorHandlers);
     }
 
     private static String flowItemName(FlowItem<?, ?, ?> flowItem) {
@@ -72,7 +85,7 @@ public final class FlowBuilder<I, C, O> {
         public <I, O> FlowBuilder<I, C, O> step(FlowItem<I, C, O> flowItem) {
             List<StepEntry<?, C, ?>> steps = new ArrayList<>();
             steps.add(new StepEntry<>(flowItemName(flowItem), flowItem));
-            return new FlowBuilder<>(steps);
+            return new FlowBuilder<>(steps, new ArrayList<>());
         }
     }
 }

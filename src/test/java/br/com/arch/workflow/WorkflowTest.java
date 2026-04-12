@@ -174,4 +174,69 @@ class WorkflowTest {
 
         assertThat(workflow.getStepCount()).isEqualTo(3);
     }
+
+    @Test
+    @DisplayName("handle deve executar error handler quando step lanca exceção compativel")
+    void handleDeveExecutarErrorHandler() {
+        var handledErrors = new ArrayList<String>();
+
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosFlowItem)
+                .step(verificarSeJaExisteFlowItem)
+                .step(salvarNoBancoFlowItem)
+                .handle(IllegalArgumentException.class, (ex, ctx) ->
+                        handledErrors.add(ex.getMessage()))
+                .build();
+
+        var context = new UsuarioContext();
+
+        assertThatThrownBy(() -> workflow.execute(new DadosUsuario("", "test@test.com"), context))
+                .isInstanceOf(WorkflowException.class);
+
+        assertThat(handledErrors).containsExactly("Nome e obrigatorio");
+    }
+
+    @Test
+    @DisplayName("handle nao deve executar quando exceção nao e compativel")
+    void handleNaoDeveExecutarQuandoTipoIncompativel() {
+        var handledErrors = new ArrayList<String>();
+
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosFlowItem)
+                .step(verificarSeJaExisteFlowItem)
+                .step(salvarNoBancoFlowItem)
+                .handle(NullPointerException.class, (ex, ctx) ->
+                        handledErrors.add(ex.getMessage()))
+                .build();
+
+        var context = new UsuarioContext();
+
+        assertThatThrownBy(() -> workflow.execute(new DadosUsuario("", "test@test.com"), context))
+                .isInstanceOf(WorkflowException.class);
+
+        assertThat(handledErrors).isEmpty();
+    }
+
+    @Test
+    @DisplayName("handle deve permitir acesso ao contexto no error handler")
+    void handleDevePermitirAcessoAoContexto() {
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
+                .<UsuarioContext>builder()
+                .step(verificarDadosFlowItem)
+                .step(verificarSeJaExisteFlowItem)
+                .step(salvarNoBancoFlowItem)
+                .handle(IllegalStateException.class, (ex, ctx) ->
+                        ctx.stepsExecutados.add("errorHandled"))
+                .build();
+
+        var context = new UsuarioContext();
+        context.jaExiste = true;
+
+        assertThatThrownBy(() -> workflow.execute(new DadosUsuario("Joao", "joao@inter.com"), context))
+                .isInstanceOf(WorkflowException.class);
+
+        assertThat(context.stepsExecutados).containsExactly("verificarDados", "errorHandled");
+    }
 }

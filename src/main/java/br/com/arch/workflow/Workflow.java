@@ -18,9 +18,11 @@ public final class Workflow<I, C, O> {
     private static final Logger log = LoggerFactory.getLogger(Workflow.class);
 
     private final List<StepEntry<?, C, ?>> steps;
+    private final List<ErrorHandlerEntry<C>> errorHandlers;
 
-    Workflow(List<StepEntry<?, C, ?>> steps) {
+    Workflow(List<StepEntry<?, C, ?>> steps, List<ErrorHandlerEntry<C>> errorHandlers) {
         this.steps = List.copyOf(steps);
+        this.errorHandlers = List.copyOf(errorHandlers);
     }
 
     @SuppressWarnings("unchecked")
@@ -40,6 +42,7 @@ public final class Workflow<I, C, O> {
             } catch (WorkflowException e) {
                 throw e;
             } catch (Exception e) {
+                invokeErrorHandlers(e, context);
                 throw new WorkflowException(
                         "Falha no step '%s' (indice %d): %s"
                                 .formatted(stepName, i, e.getMessage()),
@@ -52,6 +55,15 @@ public final class Workflow<I, C, O> {
 
         log.info("Workflow concluido com sucesso");
         return (O) current;
+    }
+
+    private void invokeErrorHandlers(Exception exception, C context) {
+        for (ErrorHandlerEntry<C> entry : errorHandlers) {
+            if (entry.handle(exception, context)) {
+                log.debug("Error handler executado para {}", exception.getClass().getSimpleName());
+                return;
+            }
+        }
     }
 
     public WorkflowResult<O> executeSafe(I input, C context) {
