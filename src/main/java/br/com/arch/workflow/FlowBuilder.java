@@ -51,13 +51,14 @@ public final class FlowBuilder<I, C, O> {
     }
 
     /**
-     * Registra um handler para exceções de um tipo especifico.
-     * Quando um step lanca uma exceção compatível, o handler é invocado
-     * com a exceção e o contexto antes de propagar.
+     * Registra um {@link ErrorHandler} (activity) para tratar exceções.
+     * O handler define internamente qual tipo de exceção trata via {@link ErrorHandler#getExceptionType()}.
+     * <p>
+     * Permite injetar componentes gerenciados (ex: Spring {@code @Component}).
      */
-    public <E extends Exception> FlowBuilder<I, C, O> handle(Class<E> exceptionType, ErrorHandler<E, C> handler) {
+    public FlowBuilder<I, C, O> handle(ErrorHandler<? extends Exception, C> handler) {
         List<ErrorHandlerEntry<C>> newHandlers = new ArrayList<>(this.errorHandlers);
-        newHandlers.add(new ErrorHandlerEntry<>(exceptionType, handler));
+        newHandlers.add(new ErrorHandlerEntry<>(handler.getExceptionType(), handler));
         return new FlowBuilder<>(this.steps, newHandlers);
     }
 

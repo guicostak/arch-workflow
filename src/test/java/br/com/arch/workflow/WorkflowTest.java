@@ -175,18 +175,57 @@ class WorkflowTest {
         assertThat(workflow.getStepCount()).isEqualTo(3);
     }
 
+    static class IllegalArgumentHandler implements ErrorHandler<IllegalArgumentException, UsuarioContext> {
+        final List<String> handledErrors = new ArrayList<>();
+
+        @Override
+        public Class<IllegalArgumentException> getExceptionType() {
+            return IllegalArgumentException.class;
+        }
+
+        @Override
+        public void handle(IllegalArgumentException exception, UsuarioContext context) {
+            handledErrors.add(exception.getMessage());
+        }
+    }
+
+    static class NullPointerHandler implements ErrorHandler<NullPointerException, UsuarioContext> {
+        final List<String> handledErrors = new ArrayList<>();
+
+        @Override
+        public Class<NullPointerException> getExceptionType() {
+            return NullPointerException.class;
+        }
+
+        @Override
+        public void handle(NullPointerException exception, UsuarioContext context) {
+            handledErrors.add(exception.getMessage());
+        }
+    }
+
+    static class IllegalStateHandler implements ErrorHandler<IllegalStateException, UsuarioContext> {
+        @Override
+        public Class<IllegalStateException> getExceptionType() {
+            return IllegalStateException.class;
+        }
+
+        @Override
+        public void handle(IllegalStateException exception, UsuarioContext context) {
+            context.stepsExecutados.add("errorHandled");
+        }
+    }
+
     @Test
-    @DisplayName("handle deve executar error handler quando step lanca exceção compativel")
+    @DisplayName("handle deve executar error handler activity quando step lanca exceção compativel")
     void handleDeveExecutarErrorHandler() {
-        var handledErrors = new ArrayList<String>();
+        var handler = new IllegalArgumentHandler();
 
         Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .handle(IllegalArgumentException.class, (ex, ctx) ->
-                        handledErrors.add(ex.getMessage()))
+                .handle(handler)
                 .build();
 
         var context = new UsuarioContext();
@@ -194,21 +233,20 @@ class WorkflowTest {
         assertThatThrownBy(() -> workflow.execute(new DadosUsuario("", "test@test.com"), context))
                 .isInstanceOf(WorkflowException.class);
 
-        assertThat(handledErrors).containsExactly("Nome e obrigatorio");
+        assertThat(handler.handledErrors).containsExactly("Nome e obrigatorio");
     }
 
     @Test
     @DisplayName("handle nao deve executar quando exceção nao e compativel")
     void handleNaoDeveExecutarQuandoTipoIncompativel() {
-        var handledErrors = new ArrayList<String>();
+        var handler = new NullPointerHandler();
 
         Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .handle(NullPointerException.class, (ex, ctx) ->
-                        handledErrors.add(ex.getMessage()))
+                .handle(handler)
                 .build();
 
         var context = new UsuarioContext();
@@ -216,19 +254,18 @@ class WorkflowTest {
         assertThatThrownBy(() -> workflow.execute(new DadosUsuario("", "test@test.com"), context))
                 .isInstanceOf(WorkflowException.class);
 
-        assertThat(handledErrors).isEmpty();
+        assertThat(handler.handledErrors).isEmpty();
     }
 
     @Test
-    @DisplayName("handle deve permitir acesso ao contexto no error handler")
+    @DisplayName("handle deve permitir acesso ao contexto no error handler activity")
     void handleDevePermitirAcessoAoContexto() {
         Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .handle(IllegalStateException.class, (ex, ctx) ->
-                        ctx.stepsExecutados.add("errorHandled"))
+                .handle(new IllegalStateHandler())
                 .build();
 
         var context = new UsuarioContext();
