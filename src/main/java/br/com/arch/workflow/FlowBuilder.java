@@ -16,7 +16,7 @@ import java.util.List;
  *     .step(verificarDadosFlowItem)
  *     .step(verificarSeJaExisteFlowItem)
  *     .step(salvarNoBancoFlowItem)
- *     .build("criarUsuario");
+ *     .build();
  * </pre>
  *
  * @param <I> tipo do input inicial do workflow
@@ -49,20 +49,13 @@ public final class FlowBuilder<I, C, O> {
     }
 
     /**
-     * Constroi o workflow com um nome identificador.
+     * Constroi o workflow.
      */
-    public Workflow<I, C, O> build(String workflowName) {
+    public Workflow<I, C, O> build() {
         if (steps.isEmpty()) {
             throw new IllegalStateException("Workflow deve ter pelo menos um step");
         }
-        return new Workflow<>(workflowName, steps);
-    }
-
-    /**
-     * Constroi o workflow com nome padrao.
-     */
-    public Workflow<I, C, O> build() {
-        return build("workflow");
+        return new Workflow<>(steps);
     }
 
     private static String flowItemName(FlowItem<?, ?, ?> flowItem) {

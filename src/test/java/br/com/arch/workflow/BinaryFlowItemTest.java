@@ -86,7 +86,7 @@ class BinaryFlowItemTest {
                 .step(validarNomeFlowItem)
                 .step(converterFlowItem)
                 .step(binaryStep)
-                .build("cadastroUsuario");
+                .build();
 
         var ctx = new UsuarioContext();
         ctx.isPessoaFisica = true;

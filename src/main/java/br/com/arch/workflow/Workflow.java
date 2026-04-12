@@ -17,17 +17,15 @@ public final class Workflow<I, C, O> {
 
     private static final Logger log = LoggerFactory.getLogger(Workflow.class);
 
-    private final String name;
     private final List<StepEntry<?, C, ?>> steps;
 
-    Workflow(String name, List<StepEntry<?, C, ?>> steps) {
-        this.name = name;
+    Workflow(List<StepEntry<?, C, ?>> steps) {
         this.steps = List.copyOf(steps);
     }
 
     @SuppressWarnings("unchecked")
     public O execute(I input, C context) {
-        log.info("Iniciando workflow '{}' com {} step(s)", name, steps.size());
+        log.info("Iniciando workflow com {} step(s)", steps.size());
 
         Object current = input;
 
@@ -35,7 +33,7 @@ public final class Workflow<I, C, O> {
             StepEntry<Object, C, Object> step = (StepEntry<Object, C, Object>) steps.get(i);
             String stepName = step.name();
 
-            log.debug("Workflow '{}' — executando step {}: '{}'", name, i + 1, stepName);
+            log.debug("Executando step {}: '{}'", i + 1, stepName);
 
             try {
                 current = step.flowItem().execute(current, context);
@@ -43,16 +41,16 @@ public final class Workflow<I, C, O> {
                 throw e;
             } catch (Exception e) {
                 throw new WorkflowException(
-                        "Falha no step '%s' (indice %d) do workflow '%s': %s"
-                                .formatted(stepName, i, name, e.getMessage()),
+                        "Falha no step '%s' (indice %d): %s"
+                                .formatted(stepName, i, e.getMessage()),
                         e, stepName, i
                 );
             }
 
-            log.debug("Workflow '{}' — step '{}' concluido", name, stepName);
+            log.debug("Step '{}' concluido", stepName);
         }
 
-        log.info("Workflow '{}' concluido com sucesso", name);
+        log.info("Workflow concluido com sucesso");
         return (O) current;
     }
 
@@ -61,13 +59,9 @@ public final class Workflow<I, C, O> {
             O output = execute(input, context);
             return WorkflowResult.success(output);
         } catch (WorkflowException e) {
-            log.error("Workflow '{}' falhou no step '{}': {}", name, e.getFlowItemName(), e.getMessage());
+            log.error("Workflow falhou no step '{}': {}", e.getFlowItemName(), e.getMessage());
             return WorkflowResult.failure(e);
         }
-    }
-
-    public String getName() {
-        return name;
     }
 
     public int getStepCount() {

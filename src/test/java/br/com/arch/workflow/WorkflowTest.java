@@ -53,7 +53,7 @@ class WorkflowTest {
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .build("criarUsuario");
+                .build();
 
         var context = new UsuarioContext();
         var resultado = workflow.execute(new DadosUsuario("Joao", "joao@inter.com"), context);
@@ -88,7 +88,7 @@ class WorkflowTest {
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .build("criarUsuario");
+                .build();
 
         var context = new UsuarioContext();
 
@@ -106,7 +106,7 @@ class WorkflowTest {
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .build("criarUsuario");
+                .build();
 
         var context = new UsuarioContext();
         context.jaExiste = true;
@@ -163,16 +163,15 @@ class WorkflowTest {
     }
 
     @Test
-    @DisplayName("workflow deve expor nome e quantidade de steps")
+    @DisplayName("workflow deve expor quantidade de steps")
     void deveExporMetadados() {
         Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
                 .step(salvarNoBancoFlowItem)
-                .build("criarUsuario");
+                .build();
 
-        assertThat(workflow.getName()).isEqualTo("criarUsuario");
         assertThat(workflow.getStepCount()).isEqualTo(3);
     }
 }
