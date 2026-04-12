@@ -48,7 +48,7 @@ class WorkflowTest {
     @Test
     @DisplayName("deve executar workflow completo encadeando output -> input")
     void deveExecutarWorkflowCompleto() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
@@ -67,7 +67,7 @@ class WorkflowTest {
     @Test
     @DisplayName("deve propagar contexto entre steps")
     void devePropagarContexto() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
@@ -83,7 +83,7 @@ class WorkflowTest {
     @Test
     @DisplayName("deve lancar WorkflowException quando step falha")
     void deveLancarWorkflowExceptionQuandoStepFalha() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
@@ -101,7 +101,7 @@ class WorkflowTest {
     @Test
     @DisplayName("deve parar execucao no step que falha sem executar os seguintes")
     void devePararNoStepQueFalha() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
@@ -120,7 +120,7 @@ class WorkflowTest {
     @Test
     @DisplayName("executeSafe deve retornar resultado de sucesso")
     void executeSafeDeveRetornarSucesso() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
@@ -137,7 +137,7 @@ class WorkflowTest {
     @Test
     @DisplayName("executeSafe deve retornar resultado de falha sem lancar excecao")
     void executeSafeDeveRetornarFalha() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)
@@ -153,7 +153,7 @@ class WorkflowTest {
     @Test
     @DisplayName("deve funcionar com step unico")
     void deveFuncionarComStepUnico() {
-        Workflow<String, Void, Integer> workflow = WorkflowBuilder
+        Workflow<String, Void, Integer> workflow = FlowBuilder
                 .<Void>builder()
                 .<String, Integer>step((input, ctx) -> input.length())
                 .build();
@@ -165,7 +165,7 @@ class WorkflowTest {
     @Test
     @DisplayName("workflow deve expor nome e quantidade de steps")
     void deveExporMetadados() {
-        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = WorkflowBuilder
+        Workflow<DadosUsuario, UsuarioContext, UsuarioSalvo> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(verificarDadosFlowItem)
                 .step(verificarSeJaExisteFlowItem)

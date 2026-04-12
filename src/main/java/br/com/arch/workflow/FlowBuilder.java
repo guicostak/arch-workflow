@@ -11,7 +11,7 @@ import java.util.List;
  * <p>
  * Exemplo de uso:
  * <pre>
- * Workflow&lt;DadosUsuario, UsuarioContext, Usuario&gt; workflow = WorkflowBuilder
+ * Workflow&lt;DadosUsuario, UsuarioContext, Usuario&gt; workflow = FlowBuilder
  *     .&lt;UsuarioContext&gt;builder()
  *     .step(verificarDadosFlowItem)
  *     .step(verificarSeJaExisteFlowItem)
@@ -23,11 +23,11 @@ import java.util.List;
  * @param <C> tipo do contexto compartilhado
  * @param <O> tipo do output atual (ultimo step adicionado)
  */
-public final class WorkflowBuilder<I, C, O> {
+public final class FlowBuilder<I, C, O> {
 
     private final List<StepEntry<?, C, ?>> steps;
 
-    private WorkflowBuilder(List<StepEntry<?, C, ?>> steps) {
+    private FlowBuilder(List<StepEntry<?, C, ?>> steps) {
         this.steps = steps;
     }
 
@@ -42,10 +42,10 @@ public final class WorkflowBuilder<I, C, O> {
      * Adiciona o proximo step ao workflow.
      * O input (O) deste step deve ser o output do step anterior.
      */
-    public <N> WorkflowBuilder<I, C, N> step(FlowItem<O, C, N> flowItem) {
+    public <N> FlowBuilder<I, C, N> step(FlowItem<O, C, N> flowItem) {
         List<StepEntry<?, C, ?>> newSteps = new ArrayList<>(this.steps);
         newSteps.add(new StepEntry<>(flowItemName(flowItem), flowItem));
-        return new WorkflowBuilder<>(newSteps);
+        return new FlowBuilder<>(newSteps);
     }
 
     /**
@@ -76,10 +76,10 @@ public final class WorkflowBuilder<I, C, O> {
 
         InitialBuilder() {}
 
-        public <I, O> WorkflowBuilder<I, C, O> step(FlowItem<I, C, O> flowItem) {
+        public <I, O> FlowBuilder<I, C, O> step(FlowItem<I, C, O> flowItem) {
             List<StepEntry<?, C, ?>> steps = new ArrayList<>();
             steps.add(new StepEntry<>(flowItemName(flowItem), flowItem));
-            return new WorkflowBuilder<>(steps);
+            return new FlowBuilder<>(steps);
         }
     }
 }

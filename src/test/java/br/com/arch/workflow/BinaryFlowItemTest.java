@@ -81,7 +81,7 @@ class BinaryFlowItemTest {
                 .ifTrue(validarCpfFlowItem)
                 .ifFalse(validarCnpjFlowItem);
 
-        Workflow<InputInicial, UsuarioContext, DocumentoValidado> workflow = WorkflowBuilder
+        Workflow<InputInicial, UsuarioContext, DocumentoValidado> workflow = FlowBuilder
                 .<UsuarioContext>builder()
                 .step(validarNomeFlowItem)
                 .step(converterFlowItem)
